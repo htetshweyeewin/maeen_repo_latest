@@ -1,0 +1,168 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+  <!-- ব্যক্তিগত তথ্য -->
+  <section class="card section">
+    <h2 class="section-title">ব্যক্তিগত তথ্য</h2>
+    <div class="grid">
+      <div class="field span-2">
+        <label for="name">১। নাম<span class="req">*</span></label>
+        <input id="name" type="text" formControlName="name" placeholder="পূর্ণ নাম লিখুন" autocomplete="name">
+        @if (err('name'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="fatherName">২। পিতার নাম<span class="req">*</span></label>
+        <input id="fatherName" type="text" formControlName="fatherName">
+        @if (err('fatherName'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="motherName">৩। মাতার নাম<span class="req">*</span></label>
+        <input id="motherName" type="text" formControlName="motherName">
+        @if (err('motherName'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="dob">৪। জন্ম তারিখ<span class="req">*</span></label>
+        <input id="dob" type="date" formControlName="dateOfBirth" [max]="today">
+        @if (err('dateOfBirth'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      <div class="field">
+        <label for="education">৬। শিক্ষাগত যোগ্যতা</label>
+        <input id="education" type="text" formControlName="education" list="education-list"
+               placeholder="যেমন: আলিম / এইচ.এস.সি">
+        <datalist id="education-list">
+          @for (e of educationSuggestions; track e) { <option [value]="e"></option> }
+        </datalist>
+        @if (err('education'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      <div class="field span-2">
+        <label>৫। রক্তের গ্রুপ</label>
+        <div class="radio-row">
+          @for (b of meta?.bloodGroups ?? []; track b.code) {
+            <label class="radio-pill">
+              <input type="radio" formControlName="bloodGroup" [value]="b.code"> {{ b.label }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="field span-2">
+        <label for="email">৭। ই-মেইল</label>
+        <input id="email" type="email" formControlName="email" placeholder="example@gmail.com" autocomplete="email">
+        @if (err('email'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+    </div>
+  </section>
+
+  <!-- মোবাইল -->
+  <section class="card section">
+    <h2 class="section-title">৮। মোবাইল</h2>
+    <div class="field mb">
+      <label for="mobile1">মোবাইল নম্বর ১<span class="req">*</span></label>
+      <div class="mobile-row">
+        <input id="mobile1" type="tel" formControlName="mobile1" placeholder="০১XXXXXXXXX" inputmode="tel">
+        <label class="check"><input type="checkbox" formControlName="mobile1Call"> কল</label>
+        <label class="check"><input type="checkbox" formControlName="mobile1WhatsApp"> WhatsApp</label>
+      </div>
+      @if (err('mobile1'); as e) { <span class="error">{{ e }}</span> }
+    </div>
+    <div class="field">
+      <label for="mobile2">মোবাইল নম্বর ২</label>
+      <div class="mobile-row">
+        <input id="mobile2" type="tel" formControlName="mobile2" placeholder="০১XXXXXXXXX (ঐচ্ছিক)" inputmode="tel">
+        <label class="check"><input type="checkbox" formControlName="mobile2Call"> কল</label>
+        <label class="check"><input type="checkbox" formControlName="mobile2WhatsApp"> WhatsApp</label>
+      </div>
+      @if (err('mobile2'); as e) { <span class="error">{{ e }}</span> }
+      <span class="hint">যে নম্বরে কল বা WhatsApp করা যাবে তা চিহ্নিত করুন</span>
+    </div>
+  </section>
+
+  <!-- স্থায়ী ঠিকানা -->
+  <section class="card section">
+    <h2 class="section-title">৯। স্থায়ী ঠিকানা</h2>
+    <app-address-fields [group]="permanentGroup" />
+  </section>
+
+  <!-- বর্তমান ঠিকানা -->
+  <section class="card section">
+    <h2 class="section-title">১০। বর্তমান ঠিকানা</h2>
+    <label class="check mb">
+      <input type="checkbox" formControlName="presentSameAsPermanent">
+      বর্তমান ঠিকানা ও স্থায়ী ঠিকানা একই
+    </label>
+    @if (!form.value.presentSameAsPermanent) {
+      <app-address-fields [group]="presentGroup" />
+    }
+  </section>
+
+  <!-- সাংগঠনিক তথ্য -->
+  <section class="card section">
+    <h2 class="section-title">সাংগঠনিক তথ্য</h2>
+
+    <div class="field mb">
+      <label>১১। সাংগঠনিক দায়িত্ব (যদি থাকে)</label>
+      <div class="radio-row">
+        <label class="radio-pill">
+          <input type="radio" formControlName="responsibilityLevel" [value]="null"> নেই
+        </label>
+        @for (l of meta?.orgLevels ?? []; track l.code) {
+          <label class="radio-pill">
+            <input type="radio" formControlName="responsibilityLevel" [value]="l.code"> {{ l.label }}
+          </label>
+        }
+      </div>
+    </div>
+
+    @if (form.value.responsibilityLevel) {
+      <div class="field mb">
+        <label for="designation">পদবি<span class="req">*</span></label>
+        <select id="designation" formControlName="designation">
+          <option [ngValue]="null">-- পদবি নির্বাচন করুন --</option>
+          @for (d of designations; track d.code) { <option [ngValue]="d.code">{{ d.label }}</option> }
+        </select>
+        @if (err('designation'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+    }
+
+    <div class="field mb">
+      <label>১২। সাংগঠনিক মান<span class="req">*</span></label>
+      <div class="radio-row">
+        @for (r of meta?.orgRanks ?? []; track r.code) {
+          <label class="radio-pill">
+            <input type="radio" formControlName="orgRank" [value]="r.code"> {{ r.label }}
+          </label>
+        }
+      </div>
+      @if (err('orgRank'); as e) { <span class="error">{{ e }}</span> }
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label for="oathDate">১৩। শপথ গ্রহণের তারিখ</label>
+        <input id="oathDate" type="date" formControlName="oathDate" [max]="today">
+        @if (err('oathDate'); as e) { <span class="error">{{ e }}</span> }
+      </div>
+
+      @if (zilas) {
+        <div class="field">
+          <label for="orgZila">সাংগঠনিক যেলা (এডমিন)</label>
+          <select id="orgZila" formControlName="orgZilaId">
+            <option [ngValue]="null">স্বয়ংক্রিয় (বর্তমান ঠিকানা অনুযায়ী)</option>
+            @for (z of zilas; track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }
+            <option [ngValue]="0">কোনো যেলা নয়</option>
+          </select>
+        </div>
+      }
+    </div>
+  </section>
+
+  <div class="row" style="justify-content: center; margin: 24px 0 8px;">
+    <button type="submit" class="btn btn-lg" [disabled]="submitting">
+      {{ submitting ? 'অপেক্ষা করুন...' : submitLabel }}
+    </button>
+  </div>
+</form>

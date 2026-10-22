@@ -1,0 +1,134 @@
+<div class="row mb">
+  <h1 class="page-title">সদস্য তালিকা</h1>
+  @if (auth.user()?.orgZilaName; as z) { <span class="muted">— {{ z }} যেলা</span> }
+  <div class="spacer"></div>
+  <label class="check live" [class.on]="live">
+    <input type="checkbox" [(ngModel)]="live">
+    <span class="dot"></span> লাইভ
+  </label>
+  @if (lastUpdated) {
+    <span class="muted small">হালনাগাদ: {{ lastUpdated.toTimeString().slice(0, 8) | bn }}</span>
+  }
+  <button type="button" class="btn btn-sm btn-outline" (click)="refresh()" [disabled]="loading">↻ রিফ্রেশ</button>
+  <button type="button" class="btn btn-sm btn-outline" (click)="exportCsv()">⬇ Excel (CSV)</button>
+</div>
+
+<!-- পরিসংখ্যান - ক্লিক করলে সেই অবস্থার তালিকা -->
+<div class="stats">
+  <button type="button" class="stat" [class.active]="query.status === ''" (click)="setStatus('')">
+    <span>মোট</span><strong>{{ (stats?.total ?? 0) | bn }}</strong>
+  </button>
+  <button type="button" class="stat pending" [class.active]="query.status === 'PENDING'" (click)="setStatus('PENDING')">
+    <span>অপেক্ষমাণ</span><strong>{{ (stats?.pending ?? 0) | bn }}</strong>
+  </button>
+  <button type="button" class="stat approved" [class.active]="query.status === 'APPROVED'" (click)="setStatus('APPROVED')">
+    <span>অনুমোদিত</span><strong>{{ (stats?.approved ?? 0) | bn }}</strong>
+  </button>
+  <button type="button" class="stat rejected" [class.active]="query.status === 'REJECTED'" (click)="setStatus('REJECTED')">
+    <span>বাতিল</span><strong>{{ (stats?.rejected ?? 0) | bn }}</strong>
+  </button>
+</div>
+
+<!-- ফিল্টার -->
+<div class="filters">
+  <input type="search" class="search" placeholder="নাম, পিতার নাম, মোবাইল, গ্রাম, ইউনিয়ন বা উপযেলা দিয়ে খুঁজুন..."
+         [ngModel]="query.q" (ngModelChange)="onSearch($event)">
+  @if (auth.isSuperAdmin()) {
+    <select [(ngModel)]="query.orgZilaId" (ngModelChange)="reload()">
+      <option [ngValue]="null">সকল যেলা</option>
+      @for (z of zilas; track z.id) { <option [ngValue]="z.id">{{ z.name }}</option> }
+      <option [ngValue]="0">যেলা নির্ধারিত হয়নি</option>
+    </select>
+  }
+  <select [(ngModel)]="query.level" (ngModelChange)="reload()">
+    <option value="">সকল দায়িত্ব</option>
+    @for (l of meta?.orgLevels ?? []; track l.code) { <option [value]="l.code">{{ l.label }} দায়িত্বশীল</option> }
+  </select>
+  <select [(ngModel)]="query.orgRank" (ngModelChange)="reload()">
+    <option value="">সকল মান</option>
+    @for (r of meta?.orgRanks ?? []; track r.code) { <option [value]="r.code">{{ r.label }}</option> }
+  </select>
+</div>
+
+@if (error) { <div class="alert alert-error">{{ error }}</div> }
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ক্রমিক</th>
+        <th>নাম</th>
+        <th>মোবাইল</th>
+        <th>ঠিকানা</th>
+        <th>দায়িত্ব / মান</th>
+        @if (auth.isSuperAdmin()) { <th>যেলা</th> }
+        <th>অবস্থা</th>
+        <th>কার্যক্রম</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (m of data?.content ?? []; track m.id; let i = $index) {
+        <tr>
+          <td>{{ serial(i) | bn }}</td>
+          <td>
+            <a [routerLink]="['/admin/members', m.id]"><strong>{{ m.name }}</strong></a>
+            <div class="sub">পিতা: {{ m.fatherName }}</div>
+            <div class="sub">নিবন্ধন: {{ m.createdAt | bnDate: true }}</div>
+          </td>
+          <td class="nowrap">
+            <div>
+              <a [href]="'tel:' + m.mobile1">{{ m.mobile1 | bn }}</a>
+              @if (m.mobile1Call) { <span class="tag">কল</span> }
+              @if (m.mobile1WhatsApp) { <a class="tag tag-wa" [href]="whatsAppLink(m.mobile1)" target="_blank" rel="noopener">WA</a> }
+            </div>
+            @if (m.mobile2) {
+              <div>
+                <a [href]="'tel:' + m.mobile2">{{ m.mobile2 | bn }}</a>
+                @if (m.mobile2Call) { <span class="tag">কল</span> }
+                @if (m.mobile2WhatsApp) { <a class="tag tag-wa" [href]="whatsAppLink(m.mobile2)" target="_blank" rel="noopener">WA</a> }
+              </div>
+            }
+          </td>
+          <td>
+            {{ m.presentAddress?.village }}@if (m.presentAddress?.unionName) {, {{ m.presentAddress?.unionName }}}
+            <div class="sub">{{ m.presentAddress?.upazilaName }}, {{ m.presentAddress?.districtName }}</div>
+          </td>
+          <td>
+            @if (m.designationLabel) { <div>{{ m.responsibilityLevelLabel }} {{ m.designationLabel }}</div> }
+            <div class="sub">{{ m.orgRankLabel }}</div>
+          </td>
+          @if (auth.isSuperAdmin()) { <td>{{ m.orgZilaName ?? '—' }}</td> }
+          <td>
+            <span class="badge badge-{{ m.status }}">{{ m.statusLabel }}</span>
+            @if (m.rejectReason) { <div class="sub" [title]="m.rejectReason">{{ m.rejectReason }}</div> }
+          </td>
+          <td>
+            <div class="actions">
+              @if (m.status !== 'APPROVED') {
+                <button type="button" class="btn btn-sm btn-success" [disabled]="busyId === m.id" (click)="approve(m)">অনুমোদন</button>
+              }
+              @if (m.status !== 'REJECTED') {
+                <button type="button" class="btn btn-sm btn-danger" [disabled]="busyId === m.id" (click)="reject(m)">বাতিল</button>
+              }
+              <a class="btn btn-sm btn-outline" [routerLink]="['/admin/members', m.id]">সম্পাদনা</a>
+            </div>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td [attr.colspan]="auth.isSuperAdmin() ? 8 : 7" class="empty">
+            {{ loading && !data ? 'লোড হচ্ছে...' : 'কোনো সদস্য পাওয়া যায়নি' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (data && data.totalPages > 1) {
+  <div class="row pager">
+    <button type="button" class="btn btn-sm btn-outline" [disabled]="page === 0" (click)="goTo(page - 1)">← আগের</button>
+    <span>পৃষ্ঠা {{ (page + 1) | bn }} / {{ data.totalPages | bn }} (মোট {{ data.totalElements | bn }} জন)</span>
+    <button type="button" class="btn btn-sm btn-outline" [disabled]="page + 1 >= data.totalPages" (click)="goTo(page + 1)">পরের →</button>
+  </div>
+}

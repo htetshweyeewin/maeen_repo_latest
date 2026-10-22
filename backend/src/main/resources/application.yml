@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: jubosongho-membership
+  datasource:
+    # ডেভেলপমেন্টের জন্য ফাইল-ভিত্তিক H2; প্রোডাকশনে 'prod' প্রোফাইল (PostgreSQL) ব্যবহার করুন
+    url: jdbc:h2:file:./data/jubosongho;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate.jdbc.batch_size: 500
+      hibernate.order_inserts: true
+  h2:
+    console:
+      enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-secret-key-to-a-long-random-string-at-least-32-bytes}
+    expiration-hours: 12
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+  bootstrap:
+    # প্রথমবার চালু হলে কেন্দ্রীয় এডমিন তৈরি হবে। লগইনের পর অবশ্যই পাসওয়ার্ড পরিবর্তন করুন।
+    super-admin-username: ${SUPER_ADMIN_USERNAME:admin}
+    super-admin-password: ${SUPER_ADMIN_PASSWORD:admin@123}
+    # নমুনা সাংগঠনিক যেলা ও তার এডমিন
+    seed-sample-zila: true
+    sample-zila-admin-password: ${SAMPLE_ZILA_ADMIN_PASSWORD:zila@123}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/jubosongho}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
